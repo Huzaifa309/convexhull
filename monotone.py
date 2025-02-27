@@ -1,0 +1,92 @@
+import pygame
+import math
+import time
+
+def orientation(p, q, r):
+    val = (q[1] - p[1]) * (r[0] - q[0]) - (q[0] - p[0]) * (r[1] - q[1])
+    if val == 0:
+        return 0  # Collinear
+    return 1 if val > 0 else 2  # Clockwise or counterclockwise
+
+def monotone(points):
+    n = len(points)
+    if n < 3:
+        return points
+
+    # Sort points lexicographically
+    points.sort()
+
+    lower_hull = []
+    for p in points:
+        while len(lower_hull) >= 2 and orientation(lower_hull[-2], lower_hull[-1], p) != 2:
+            lower_hull.pop()
+        lower_hull.append(p)
+
+    upper_hull = []
+    for p in reversed(points):
+        while len(upper_hull) >= 2 and orientation(upper_hull[-2], upper_hull[-1], p) != 2:
+            upper_hull.pop()
+        upper_hull.append(p)
+
+    # Remove the first and last points from upper_hull to avoid duplicates
+    upper_hull = upper_hull[1:-1]
+
+    return lower_hull + upper_hull
+
+
+def form_hull(points):
+    start = time.perf_counter()
+    result = monotone(points)
+    end = time.perf_counter()
+    execution_time = end - start
+    print(f"Execution time: {execution_time:.6f} seconds")
+    return result
+
+pygame.init()
+
+WIDTH, HEIGHT = 800, 600
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+RED = (255, 0, 0)
+FONT = pygame.font.Font(None, 30)
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+pygame.display.set_caption("ANDREWS MONOTONE CHAIN ALGORITHM FOR CONVEX HULL")
+
+answer = None
+running = True
+points = []
+hull_points = []
+
+while running:
+    screen.fill(WHITE)
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            running = False
+        elif event.type == pygame.MOUSEBUTTONDOWN:
+            if hull_points:  # Clear points and hull if a hull already exists
+                points = []
+                hull_points = []
+            x, y = pygame.mouse.get_pos()
+            points.append((x, y))
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_RETURN:
+                hull_points = form_hull(points)
+                
+    time_c = FONT.render("Its average case time complexity is O(nlogn) but in worst case O(n^2)",True,BLACK)
+    space_c = FONT.render("The space complexity is  O(n) as it stores input and output points",True,BLACK)
+    
+    for i, point in enumerate(points):
+        pygame.draw.circle(screen, RED, point, 4)
+        text_surface = FONT.render(str(i + 1), True, BLACK)
+        screen.blit(text_surface, (point[0] + 5, point[1] - 15))
+
+    if len(hull_points) > 1:
+        min_point = min(hull_points, key=lambda x: (x[1], x[0]))
+        hull_points.sort(key=lambda x: (math.atan2(x[1] - min_point[1], x[0] - min_point[0]), -x[1], x[0]))
+        pygame.draw.polygon(screen, BLACK, hull_points, 2)
+        screen.blit(time_c,(20,HEIGHT - 70))
+        screen.blit(space_c,(20,HEIGHT - 50))
+    pygame.display.flip()
+
+pygame.quit()
